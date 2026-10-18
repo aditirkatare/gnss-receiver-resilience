@@ -218,3 +218,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# GNSS project outputs and local development
+output/
+results/
+.vscode/
+.idea/
+
