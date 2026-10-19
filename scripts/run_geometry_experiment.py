@@ -54,7 +54,12 @@ def run_geometry_comparison(
     }
 
     rng = np.random.default_rng(seed)
-    results = []
+    noise_samples_by_trial = rng.normal(
+    0.0,
+    noise_std_m,
+    size=(trials, len(good_directions)),
+)
+results = []
 
     for geometry_name, satellite_positions_m in geometries.items():
         dop = calculate_dop(receiver_position_m, satellite_positions_m)
@@ -63,7 +68,7 @@ def run_geometry_comparison(
 
         for _ in range(trials):
             # Use the same noise samples for both geometries for a fair comparison.
-            noise = rng.normal(0.0, noise_std_m, size=len(satellite_positions_m))
+           noise = noise_samples_by_trial[_]
 
             pseudoranges_m = calculate_pseudoranges(
                 receiver_position_m,
