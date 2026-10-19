@@ -52,3 +52,9 @@ jobs:
         env:
           PYTHONPATH: src
 
+      - name: Evaluate leave-one-out fault diagnostics
+        run: python scripts/evaluate_leave_one_out.py
+        env:
+          PYTHONPATH: src
+
+
