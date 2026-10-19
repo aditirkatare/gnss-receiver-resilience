@@ -97,3 +97,44 @@ def test_rejects_non_finite_pseudoranges(simulated_gnss):
             invalid_ranges,
             initial_position_m=np.zeros(3),
         )
+def test_position_estimation_rejects_fewer_than_four_satellites():
+    import numpy as np
+    import pytest
+
+    from gnss_resilience.position import estimate_position
+
+    satellite_positions_m = np.array([
+        [20_000_000.0, 0.0, 0.0],
+        [0.0, 20_000_000.0, 0.0],
+        [0.0, 0.0, 20_000_000.0],
+    ])
+    pseudoranges_m = np.array([20_000_000.0] * 3)
+    initial_position_m = np.array([1_000_000.0, 2_000_000.0, 3_000_000.0])
+
+    with pytest.raises(ValueError, match="At least four satellites"):
+        estimate_position(
+            satellite_positions_m,
+            pseudoranges_m,
+            initial_position_m,
+        )
+
+
+def test_position_estimation_rejects_exactly_four_invalid_shape_ranges():
+    import numpy as np
+    import pytest
+
+    from gnss_resilience.position import estimate_position
+
+    satellite_positions_m = np.array([
+        [20_000_000.0, 0.0, 0.0],
+        [0.0, 20_000_000.0, 0.0],
+        [0.0, 0.0, 20_000_000.0],
+        [-20_000_000.0, 0.0, 0.0],
+    ])
+
+    with pytest.raises(ValueError, match="Pseudoranges must have shape"):
+        estimate_position(
+            satellite_positions_m,
+            np.array([20_000_000.0] * 3),
+            np.array([1_000_000.0, 2_000_000.0, 3_000_000.0]),
+        )
