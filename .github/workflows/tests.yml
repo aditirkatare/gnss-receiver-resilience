@@ -33,3 +33,8 @@ jobs:
         run: python scripts/run_noise_experiment.py
         env:
           PYTHONPATH: src
+
+      - name: Run GNSS geometry experiment
+        run: python scripts/run_geometry_experiment.py
+        env:
+          PYTHONPATH: src
