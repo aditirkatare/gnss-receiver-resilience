@@ -46,3 +46,9 @@ jobs:
         run: python scripts/run_fault_detection_experiment.py
         env:
           PYTHONPATH: src
+          
+      - name: Evaluate fault detection performance
+        run: python scripts/evaluate_fault_detection.py
+        env:
+          PYTHONPATH: src
+
