@@ -33,3 +33,5 @@ jobs:
         run: python scripts/run_noise_experiment.py
         env:
           PYTHONPATH: src
+      - name: Run satellite availability experiment
+        run: PYTHONPATH=src python scripts/run_satellite_availability_experiment.py
