@@ -52,11 +52,47 @@ PYTHONPATH=src python scripts/run_noise_experiment.py
 ```
 
 ## Limitations and Future Work
+## Satellite Geometry Experiment
 
-- Satellite positions and measurements are synthetic.
-- The current noise experiment uses one fixed satellite geometry.
-- Multipath, atmospheric effects, satellite clock and orbit errors, and real receiver data are not yet modelled.
-- Future work can compare satellite geometries, study signal degradation, and evaluate resilience under multiple error sources.
+This experiment compares positioning performance under two synthetic satellite configurations: good geometry and poor geometry.
+
+### Experimental Setup
+
+- **Trials:** 500 per geometry, 1,000 total
+- **Pseudorange noise standard deviation:** 2.0 m
+- **Random seed:** 42
+- **Satellites:** 6 in each configuration
+- **Receiver clock bias:** 125 m
+- **Noise sampling:** The same noise vector is used for corresponding trials across both geometries.
+
+### Results
+
+| Metric | Good Geometry | Poor Geometry |
+|---|---:|---:|
+| PDOP | 11.266 | 122.192 |
+| TDOP | 9.660 | 120.457 |
+| GDOP | 14.840 | 171.583 |
+| Mean position error | 18.424 m | 194.484 m |
+| Position RMSE | 22.576 m | 239.898 m |
+| Median position error | 15.190 m | 166.458 m |
+| Maximum position error | 63.086 m | 765.358 m |
+| Successful trials | 500/500 | 500/500 |
+| Failed trials | 0 | 0 |
+
+### Interpretation
+
+The poor-geometry configuration produced approximately **10.63 times the position RMSE** of the good-geometry configuration under the same pseudorange-noise standard deviation.
+
+Its PDOP was approximately 10.85 times higher, indicating substantially weaker satellite geometry for positioning. The maximum observed position error also increased from 63.086 m to 765.358 m.
+
+These results illustrate how satellite geometry can amplify the effect of pseudorange measurement noise on position estimates. The comparison is based on a controlled synthetic simulation and does not establish real-world GNSS accuracy.
+
+### Limitations
+
+- Satellite positions and measurements are synthetic rather than derived from real orbital data.
+- Both configurations use six satellites and independent Gaussian pseudorange noise.
+- Multipath, atmospheric effects, satellite clock errors, and orbital errors are not modelled.
+- The findings apply to the simulated geometries, estimator, noise assumptions, and trial configuration. They should not be generalized to all real-world GNSS conditions.
 
 ## License
 
