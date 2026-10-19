@@ -94,9 +94,9 @@ These results illustrate how satellite geometry can amplify the effect of pseudo
 - Multipath, atmospheric effects, satellite clock errors, and orbital errors are not modelled.
 - The findings apply to the simulated geometries, estimator, noise assumptions, and trial configuration. They should not be generalized to all real-world GNSS conditions.
 
-  ## Satellite Availability Experiment
+## Satellite Availability Experiment
 
-This experiment evaluates positioning performance as the number of available synthetic satellites decreases.
+This experiment evaluates how the number of available synthetic satellites affects positioning performance.
 
 ### Experimental Setup
 
@@ -106,30 +106,35 @@ This experiment evaluates positioning performance as the number of available syn
 - **Random seed:** 42
 - **Receiver clock bias:** 125 m
 - **Measurements:** Synthetic pseudoranges with independent Gaussian noise
+- **Geometry:** Six normalized synthetic satellite direction vectors; each trial uses the first N satellites for the tested satellite count
 
 ### Results
 
 | Available satellites | Successful trials | Failed trials | Position RMSE |
 |---:|---:|---:|---:|
-| 6 | 200/200 | 0 | 23.310 m |
-| 5 | 200/200 | 0 | 36.041 m |
-| 4 | 0/200 | 200 | Not available |
+| 6 | 200/200 | 0 | 3.415 m |
+| 5 | 200/200 | 0 | 4.077 m |
+| 4 | 200/200 | 0 | 4.666 m |
 | 3 | 0/200 | 200 | Not available |
 
 ### Interpretation
 
-With six available satellites, the position RMSE was 23.310 m. With five satellites, it increased to 36.041 m under the same nominal pseudorange-noise standard deviation.
+Under this experiment's synthetic geometry and noise assumptions, position RMSE increased as the number of available satellites decreased from six to four. All 200 trials succeeded for each of these three configurations.
 
-All trials using four satellites failed in this experiment. Although four satellites can provide the four measurements needed to estimate three position coordinates and receiver clock bias, the selected satellite subset must also have sufficient geometry for the estimator to solve the system. The failure indicates that the selected four-satellite configuration requires further investigation.
+All trials with three satellites failed because the estimator requires at least four satellites to estimate three-dimensional position and receiver clock bias.
 
-All trials using three satellites failed, consistent with the estimator's requirement for at least four satellites.
+Four satellites can be sufficient when the measurement geometry provides four independent constraints. The results demonstrate that the four-satellite subset used in this revised experiment satisfies the estimator's geometry requirements.
+
+### Failure Analysis
+
+The experiment records exception types and messages for failed trials. In this configuration, all 200 three-satellite trials failed with `ValueError: At least four satellites are required.` No failures occurred with four, five, or six satellites.
 
 ### Limitations
 
-- Satellite positions and measurements are synthetic, not real orbital data.
+- Satellite positions and measurements are synthetic, not derived from real orbital data.
 - Only independent Gaussian pseudorange noise is modelled.
 - Multipath, atmospheric effects, satellite clock errors, and orbital errors are not modelled.
-- These results describe this specific satellite selection and estimator; they do not establish general real-world GNSS performance.
+- Results apply to the selected satellite subsets, estimator, noise assumptions, and trial configuration. They should not be generalized to all real-world GNSS conditions.
 
 ## License
 
