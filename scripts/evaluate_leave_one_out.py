@@ -14,8 +14,8 @@ from gnss_resilience.position import estimate_position
 def leave_one_out_diagnostic(
     satellites,
     pseudoranges,
-    initial_position,
-    initial_clock_bias,
+    initial_position_m,
+    initial_clock_bias_m,
     threshold_m,
 ):
     """Score each satellite using its prediction error when excluded."""
@@ -27,8 +27,8 @@ def leave_one_out_diagnostic(
         position, clock_bias = estimate_position(
             satellites[keep],
             pseudoranges[keep],
-            initial_position_m=initial_position,
-            initial_clock_bias_m=initial_clock_bias,
+            initial_position_m=initial_position_m,
+            initial_clock_bias_m=initial_clock_bias_m,
         )
 
         predicted_range = (
@@ -106,17 +106,25 @@ def main():
             ("baseline", detect_pseudorange_fault),
             ("leave_one_out", leave_one_out_diagnostic),
         ):
+            detector_kwargs = (
+                {
+                    "initial_position_m": initial_position,
+                    "initial_clock_bias_m": 125.0,
+                    "residual_threshold_m": threshold_m,
+                }
+                if method_name == "baseline"
+                else {
+                    "initial_position_m": initial_position,
+                    "initial_clock_bias_m": 125.0,
+                    "threshold_m": threshold_m,
+                }
+            )
+
             try:
                 clean_result = detector(
                     satellites,
                     clean_ranges,
-                    initial_position=initial_position,
-                    initial_clock_bias=125.0,
-                    **(
-                        {"residual_threshold_m": threshold_m}
-                        if method_name == "baseline"
-                        else {"threshold_m": threshold_m}
-                    ),
+                    **detector_kwargs,
                 )
                 methods[method_name]["clean_false_alarms"] += int(
                     clean_result["detected"]
@@ -128,13 +136,7 @@ def main():
                 fault_result = detector(
                     satellites,
                     corrupted_ranges,
-                    initial_position=initial_position,
-                    initial_clock_bias=125.0,
-                    **(
-                        {"residual_threshold_m": threshold_m}
-                        if method_name == "baseline"
-                        else {"threshold_m": threshold_m}
-                    ),
+                    **detector_kwargs,
                 )
 
                 if fault_result["detected"]:
