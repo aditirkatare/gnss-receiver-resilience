@@ -94,6 +94,43 @@ These results illustrate how satellite geometry can amplify the effect of pseudo
 - Multipath, atmospheric effects, satellite clock errors, and orbital errors are not modelled.
 - The findings apply to the simulated geometries, estimator, noise assumptions, and trial configuration. They should not be generalized to all real-world GNSS conditions.
 
+  ## Satellite Availability Experiment
+
+This experiment evaluates positioning performance as the number of available synthetic satellites decreases.
+
+### Experimental Setup
+
+- **Trials:** 200 per satellite count
+- **Satellite counts tested:** 6, 5, 4, and 3
+- **Pseudorange noise standard deviation:** 2.0 m
+- **Random seed:** 42
+- **Receiver clock bias:** 125 m
+- **Measurements:** Synthetic pseudoranges with independent Gaussian noise
+
+### Results
+
+| Available satellites | Successful trials | Failed trials | Position RMSE |
+|---:|---:|---:|---:|
+| 6 | 200/200 | 0 | 23.310 m |
+| 5 | 200/200 | 0 | 36.041 m |
+| 4 | 0/200 | 200 | Not available |
+| 3 | 0/200 | 200 | Not available |
+
+### Interpretation
+
+With six available satellites, the position RMSE was 23.310 m. With five satellites, it increased to 36.041 m under the same nominal pseudorange-noise standard deviation.
+
+All trials using four satellites failed in this experiment. Although four satellites can provide the four measurements needed to estimate three position coordinates and receiver clock bias, the selected satellite subset must also have sufficient geometry for the estimator to solve the system. The failure indicates that the selected four-satellite configuration requires further investigation.
+
+All trials using three satellites failed, consistent with the estimator's requirement for at least four satellites.
+
+### Limitations
+
+- Satellite positions and measurements are synthetic, not real orbital data.
+- Only independent Gaussian pseudorange noise is modelled.
+- Multipath, atmospheric effects, satellite clock errors, and orbital errors are not modelled.
+- These results describe this specific satellite selection and estimator; they do not establish general real-world GNSS performance.
+
 ## License
 
 MIT
