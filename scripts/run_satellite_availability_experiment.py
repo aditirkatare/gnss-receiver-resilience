@@ -1,6 +1,7 @@
 """Compare GNSS positioning as satellite availability decreases."""
 
 import json
+from collections import Counter
 
 import numpy as np
 
@@ -35,7 +36,7 @@ def main():
     for available_count in [6, 5, 4, 3]:
         satellites_m = all_satellites_m[:available_count]
         errors_m = []
-        failures = 0
+        failure_reasons = Counter()
 
         for _ in range(trials):
             noise_m = rng.normal(
@@ -57,19 +58,21 @@ def main():
                     + np.array([100.0, -100.0, 50.0]),
                 )
 
-                errors_m.append(
-                    float(np.linalg.norm(
-                        estimated_position_m - receiver_position_m
-                    ))
-                )
-            except (ValueError, RuntimeError, np.linalg.LinAlgError):
-                failures += 1
+                error_m = float(np.linalg.norm(
+                    estimated_position_m - receiver_position_m
+                ))
+                errors_m.append(error_m)
+
+            except (ValueError, RuntimeError, np.linalg.LinAlgError) as exc:
+                reason = f"{type(exc).__name__}: {exc}"
+                failure_reasons[reason] += 1
 
         results.append({
             "available_satellites": available_count,
             "trials_requested": trials,
             "trials_succeeded": len(errors_m),
-            "trials_failed": failures,
+            "trials_failed": sum(failure_reasons.values()),
+            "failure_reasons": dict(failure_reasons),
             "position_rmse_m": (
                 float(np.sqrt(np.mean(np.square(errors_m))))
                 if errors_m else None
