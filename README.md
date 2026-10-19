@@ -1,50 +1,63 @@
+
 # GNSS Receiver & Resilience Simulator
 
-A simulation-based Global Navigation Satellite System (GNSS) positioning project exploring pseudorange measurements, receiver position estimation, measurement noise, and positioning resilience.
+A simulation-based Global Navigation Satellite System (GNSS) project exploring pseudorange measurements, receiver position estimation, satellite geometry, measurement noise, and positioning resilience.
 
-## Objectives
+## Current Features
 
-- Simulate satellite positions and receiver measurements.
-- Estimate receiver position from pseudorange observations.
-- Evaluate the impact of measurement noise on positioning accuracy.
-- Produce reproducible experiments, plots, and evaluation reports.
-- Validate core functionality with automated tests.
+- Simulated pseudorange measurements with receiver clock bias and noise.
+- Receiver position and clock-bias estimation using nonlinear least squares.
+- Position Dilution of Precision (PDOP), Time Dilution of Precision (TDOP), and Geometric Dilution of Precision (GDOP).
+- Reproducible Gaussian pseudorange-noise experiments.
+- Automated unit tests and GitHub Actions continuous integration.
 
-## Project Status
+## Noise Experiment
 
-**Phase 1: Repository setup**
+The noise experiment evaluates positioning error under six pseudorange-noise standard deviations: 0, 0.5, 1, 2, 5, and 10 metres.
 
-The initial implementation will use synthetic satellite and measurement data. Physical GNSS hardware and live satellite reception are outside the scope of the initial version.
+Each noise level uses 500 trials, with a fixed random seed and fixed synthetic satellite geometry.
 
-## Planned Technology
+### Results
 
-- Python
-- NumPy and SciPy
-- Matplotlib
-- pytest
-- GitHub Actions
+| Noise standard deviation | Position RMSE |
+|---:|---:|
+| 0 m | Approximately 0 m |
+| 0.5 m | 0.709 m |
+| 1 m | 1.419 m |
+| 2 m | 2.837 m |
+| 5 m | 7.093 m |
+| 10 m | 14.186 m |
 
-## Planned Repository Structure
+All 3,000 requested trials completed successfully in this experiment.
 
-```text
-gnss-receiver-resilience/
-├── src/
-├── tests/
-├── notebooks/
-├── results/
-├── README.md
-├── requirements.txt
-└── .gitignore
-```
+### Interpretation
+
+Positioning RMSE increased as simulated pseudorange noise increased. With zero injected noise, the estimator recovered the known receiver position to within numerical precision.
+
+The experiment uses synthetic measurements and fixed satellite geometry. Its results demonstrate the behaviour of this implementation under the stated conditions; they do not establish real-world GNSS receiver accuracy or resilience.
 
 ## Reproducibility
 
-Experiments will use documented assumptions and fixed random seeds where randomness is involved. Automated tests will check expected behavior, and evaluation results will distinguish simulated performance from real-world receiver performance.
+- Python 3.12
+- Dependencies are pinned in `requirements.txt`.
+- Randomized experiments use a fixed seed.
+- Unit tests run through GitHub Actions.
+- The noise experiment runs in the CI workflow.
 
-## Scope and Limitations
+To run the experiment in a configured Python environment:
 
-This project is an educational software simulation. Results generated from synthetic data do not establish the accuracy or resilience of a physical GNSS receiver.
+```bash
+python -m pip install -r requirements.txt
+PYTHONPATH=src python scripts/run_noise_experiment.py
+```
+
+## Limitations and Future Work
+
+- Satellite positions and measurements are synthetic.
+- The current noise experiment uses one fixed satellite geometry.
+- Multipath, atmospheric effects, satellite clock and orbit errors, and real receiver data are not yet modelled.
+- Future work can compare satellite geometries, study signal degradation, and evaluate resilience under multiple error sources.
 
 ## License
 
-MIT License
+MIT
