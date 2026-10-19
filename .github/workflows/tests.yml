@@ -41,3 +41,8 @@ jobs:
           
       - name: Run satellite availability experiment
         run: PYTHONPATH=src python scripts/run_satellite_availability_experiment.py
+
+      - name: Run pseudorange fault detection experiment
+        run: python scripts/run_fault_detection_experiment.py
+        env:
+          PYTHONPATH: src
