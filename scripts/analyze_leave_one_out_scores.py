@@ -1,88 +1,140 @@
 
-"""Least-squares GNSS receiver position estimation."""
+"""Analyze leave-one-out GNSS fault-isolation scores."""
+
+import json
+from pathlib import Path
 
 import numpy as np
 
+from gnss_resilience.measurements import calculate_pseudoranges
+from gnss_resilience.position import estimate_position
 
-def estimate_position(
-    satellite_positions_m,
-    pseudoranges_m,
-    initial_position_m,
-    initial_clock_bias_m=0.0,
-    max_iterations=20,
-    tolerance_m=1e-4,
-):
-    """Estimate receiver ECEF position and clock bias using least squares.
 
-    Returns:
-        (position_m, clock_bias_m): estimated ECEF position and clock bias,
-        both expressed in metres.
+def score_excluded_satellites(satellites, ranges, initial_position, clock_bias):
+    scores = []
 
-    Raises:
-        ValueError: if inputs are invalid or the geometry is unsolvable.
-        RuntimeError: if the estimator fails to converge.
-    """
-    satellites = np.asarray(satellite_positions_m, dtype=float)
-    ranges = np.asarray(pseudoranges_m, dtype=float)
-    position = np.asarray(initial_position_m, dtype=float).copy()
-    clock_bias = float(initial_clock_bias_m)
-
-    if satellites.ndim != 2 or satellites.shape[1] != 3:
-        raise ValueError("Satellite positions must have shape (n, 3).")
-
-    count = satellites.shape[0]
-
-    if count < 4:
-        raise ValueError("At least four satellites are required.")
-
-    if ranges.shape != (count,):
-        raise ValueError("Pseudoranges must have shape (n,).")
-
-    if position.shape != (3,):
-        raise ValueError("Initial position must have shape (3,).")
-
-    if not np.all(np.isfinite(satellites)):
-        raise ValueError("Satellite coordinates must be finite.")
-
-    if not np.all(np.isfinite(ranges)) or np.any(ranges <= 0):
-        raise ValueError("Pseudoranges must be finite and positive.")
-
-    if not np.all(np.isfinite(position)) or not np.isfinite(clock_bias):
-        raise ValueError("Initial estimates must be finite.")
-
-    if not isinstance(max_iterations, int) or max_iterations < 1:
-        raise ValueError("max_iterations must be a positive integer.")
-
-    if not np.isfinite(tolerance_m) or tolerance_m <= 0:
-        raise ValueError("tolerance_m must be finite and positive.")
-
-    for _ in range(max_iterations):
-        differences = position - satellites
-        geometric_ranges = np.linalg.norm(differences, axis=1)
-
-        if np.any(geometric_ranges == 0):
-            raise ValueError("Receiver estimate coincides with a satellite.")
-
-        predicted = geometric_ranges + clock_bias
-        residuals = ranges - predicted
-
-        # Jacobian of predicted pseudoranges with respect to x, y, z, bias.
-        jacobian = np.column_stack((
-            differences / geometric_ranges[:, None],
-            np.ones(count),
-        ))
-
-        if np.linalg.matrix_rank(jacobian) < 4:
-            raise ValueError("Satellite geometry is insufficient for a solution.")
-
-        update, _, _, _ = np.linalg.lstsq(
-            jacobian, residuals, rcond=None
+    for excluded in range(len(satellites)):
+        keep = np.arange(len(satellites)) != excluded
+        position, bias = estimate_position(
+            satellites[keep],
+            ranges[keep],
+            initial_position_m=initial_position,
+            initial_clock_bias_m=clock_bias,
         )
+        predicted = np.linalg.norm(satellites[excluded] - position) + bias
+        scores.append(float(ranges[excluded] - predicted))
 
-        position += update[:3]
-        clock_bias += update[3]
+    return np.asarray(scores)
 
-        if np.linalg.norm(update) < tolerance_m:
-            return position, clock_bias
 
-    raise RuntimeError("Position estimator did not converge.")
+def main():
+    receiver = np.array([1e6, 2e6, 3e6])
+    satellites = np.array([
+        [20e6, 0, 0],
+        [0, 21e6, 0],
+        [0, 0, 22e6],
+        [-15e6, -16e6, -17e6],
+        [18e6, -19e6, 12e6],
+    ])
+
+    trials = 200
+    noise_std = 1.0
+    fault_size = 1000.0
+    clock_bias = 125.0
+    rng = np.random.default_rng(42)
+    initial_position = receiver + np.array([100.0, -80.0, 50.0])
+    count = len(satellites)
+
+    results = {}
+
+    for faulty in range(count):
+        scores_by_candidate = [[] for _ in range(count)]
+        correct_top = 0
+        errors = 0
+        top_counts = {str(i): 0 for i in range(count)}
+
+        for _ in range(trials):
+            noise = rng.normal(0.0, noise_std, size=count)
+            clean = calculate_pseudoranges(
+                receiver,
+                satellites,
+                receiver_clock_bias_m=clock_bias,
+                noise_m=noise,
+            )
+            ranges = clean.copy()
+            ranges[faulty] += fault_size
+
+            try:
+                scores = score_excluded_satellites(
+                    satellites, ranges, initial_position, clock_bias
+                )
+            except (ValueError, RuntimeError, np.linalg.LinAlgError):
+                errors += 1
+                continue
+
+            absolute_scores = np.abs(scores)
+            predicted = int(np.argmax(absolute_scores))
+            top_counts[str(predicted)] += 1
+            correct_top += int(predicted == faulty)
+
+            for candidate, score in enumerate(absolute_scores):
+                scores_by_candidate[candidate].append(float(score))
+
+        valid = trials - errors
+        mean_scores = [
+            float(np.mean(values)) if values else None
+            for values in scores_by_candidate
+        ]
+
+        competing_maxima = []
+        for trial_index in range(valid):
+            competing = [
+                scores_by_candidate[i][trial_index]
+                for i in range(count)
+                if i != faulty
+            ]
+            if competing:
+                competing_maxima.append(max(competing))
+
+        results[str(faulty)] = {
+            "trials": trials,
+            "valid_trials": valid,
+            "errors": errors,
+            "correct_top_score": correct_top,
+            "correct_top_score_rate": correct_top / valid if valid else None,
+            "top_score_counts": top_counts,
+            "mean_absolute_score_by_excluded_satellite_m": mean_scores,
+            "mean_correct_score_m": mean_scores[faulty],
+            "mean_largest_competing_score_m": (
+                float(np.mean(competing_maxima)) if competing_maxima else None
+            ),
+        }
+
+    report = {
+        "experiment": "Leave-one-out score analysis",
+        "seed": 42,
+        "trials_per_faulty_satellite": trials,
+        "noise_std_m": noise_std,
+        "injected_fault_m": fault_size,
+        "results_by_actual_faulty_satellite": results,
+        "limitations": [
+            "Synthetic measurements and fixed satellite geometry.",
+            "One positive pseudorange fault is injected per trial.",
+            "Leave-one-out fits four satellites to four unknowns.",
+            "This is a diagnostic, not a complete RAIM implementation.",
+            "Results do not establish real-world receiver performance.",
+        ],
+    }
+
+    output = (
+        Path(__file__).resolve().parents[1]
+        / "results"
+        / "leave_one_out_score_report.json"
+    )
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(report, indent=2) + "\n")
+    print(json.dumps(report, indent=2))
+
+
+if __name__ == "__main__":
+    main()
