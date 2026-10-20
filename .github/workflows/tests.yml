@@ -66,6 +66,12 @@ jobs:
         run: python scripts/analyze_isolation_by_satellite.py
         env:
           PYTHONPATH: src
+      
+      - name: Analyze GNSS residual patterns
+        run: python scripts/analyze_residual_patterns.py
+        env:
+          PYTHONPATH: src
+
 
 
       
