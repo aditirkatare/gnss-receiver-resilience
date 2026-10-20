@@ -99,14 +99,24 @@ jobs:
         env:
           PYTHONPATH: src
 
+      - name: Evaluate normalized residual fault isolation
+        run: python scripts/evaluate_normalized_residuals.py
+        env:
+          PYTHONPATH: src
+
+      - name: Upload normalized residual report
+        uses: actions/upload-artifact@v4
+        with:
+          name: normalized-residual-report
+          path: results/normalized_residual_report.json
+          if-no-files-found: error
+
       - name: Upload geometry-aware isolation report
         uses: actions/upload-artifact@v4
         with:
           name: geometry-aware-isolation-report
           path: results/geometry_aware_isolation_report.json
           if-no-files-found: error
-
-      
       
       - name: Upload leave-one-out score report
         uses: actions/upload-artifact@v4
