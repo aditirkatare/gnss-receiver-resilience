@@ -77,6 +77,13 @@ jobs:
         env:
           PYTHONPATH: src
       
+      - name: Upload geometry conditioning report
+        uses: actions/upload-artifact@v4
+        with:
+          name: geometry-conditioning-report
+          path: results/geometry_conditioning_report.json
+          if-no-files-found: error
+      
       - name: Upload leave-one-out score report
         uses: actions/upload-artifact@v4
         with:
