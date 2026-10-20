@@ -1,3 +1,4 @@
+
 """Compare baseline and leave-one-out GNSS diagnostics across thresholds."""
 
 import json
@@ -17,6 +18,7 @@ def leave_one_out_diagnostic(
     initial_clock_bias_m,
     threshold_m,
 ):
+    """Evaluate each satellite using a fit that excludes its measurement."""
     scores = []
 
     for excluded_index in range(len(satellites)):
@@ -33,16 +35,17 @@ def leave_one_out_diagnostic(
             np.linalg.norm(satellites[excluded_index] - position)
             + clock_bias
         )
-        scores.append(
-            float(pseudoranges[excluded_index] - predicted_range)
+        prediction_error = float(
+            pseudoranges[excluded_index] - predicted_range
         )
+        scores.append(prediction_error)
 
     scores = np.asarray(scores)
     suspected_index = int(np.argmax(np.abs(scores)))
     max_score = float(np.max(np.abs(scores)))
 
     return {
-        "detected": max_score > threshold_m,
+        "detected": bool(max_score > threshold_m),
         "suspected_satellite_index": (
             suspected_index if max_score > threshold_m else None
         ),
@@ -51,6 +54,7 @@ def leave_one_out_diagnostic(
 
 def main():
     receiver = np.array([1e6, 2e6, 3e6])
+
     satellites = np.array([
         [20e6, 0, 0],
         [0, 21e6, 0],
@@ -63,15 +67,36 @@ def main():
     noise_std_m = 1.0
     fault_size_m = 1000.0
     thresholds_m = [5.0, 10.0, 20.0, 50.0, 100.0]
-    rng = np.random.default_rng(42)
-
     initial_position = receiver + np.array([100.0, -80.0, 50.0])
     initial_clock_bias_m = 125.0
+
+    # Generate one reproducible dataset and reuse it for every method
+    # and threshold, making comparisons fairer.
+    rng = np.random.default_rng(42)
+    clean_datasets = []
+
+    for trial in range(trials):
+        noise = rng.normal(0.0, noise_std_m, len(satellites))
+
+        clean_ranges = calculate_pseudoranges(
+            receiver,
+            satellites,
+            receiver_clock_bias_m=initial_clock_bias_m,
+            noise_m=noise,
+        )
+
+        faulty_index = trial % len(satellites)
+        faulty_ranges = clean_ranges.copy()
+        faulty_ranges[faulty_index] += fault_size_m
+
+        clean_datasets.append(
+            (clean_ranges, faulty_ranges, faulty_index)
+        )
 
     results = {}
 
     for threshold_m in thresholds_m:
-        results[str(int(threshold_m))] = {}
+        threshold_results = {}
 
         for method in ("baseline", "leave_one_out"):
             metrics = {
@@ -84,20 +109,7 @@ def main():
                 "correct_isolations": 0,
             }
 
-            for trial in range(trials):
-                noise = rng.normal(0.0, noise_std_m, len(satellites))
-
-                clean_ranges = calculate_pseudoranges(
-                    satellites,
-                    receiver,
-                    clock_bias_m=initial_clock_bias_m,
-                ) + noise
-
-
-                faulty_index = trial % len(satellites)
-                faulty_ranges = clean_ranges.copy()
-                faulty_ranges[faulty_index] += fault_size_m
-
+            for clean_ranges, faulty_ranges, faulty_index in clean_datasets:
                 for scenario, ranges in (
                     ("clean", clean_ranges),
                     ("fault", faulty_ranges),
@@ -120,7 +132,11 @@ def main():
                                 threshold_m,
                             )
 
-                    except (ValueError, RuntimeError, np.linalg.LinAlgError):
+                    except (
+                        ValueError,
+                        RuntimeError,
+                        np.linalg.LinAlgError,
+                    ):
                         metrics[f"{scenario}_errors"] += 1
                         continue
 
@@ -132,6 +148,7 @@ def main():
                     else:
                         if detection["detected"]:
                             metrics["fault_detections"] += 1
+
                             if (
                                 detection["suspected_satellite_index"]
                                 == faulty_index
@@ -154,7 +171,9 @@ def main():
                 if fault_trials else None
             )
 
-            results[str(int(threshold_m))][method] = metrics
+            threshold_results[method] = metrics
+
+        results[str(int(threshold_m))] = threshold_results
 
     report = {
         "experiment": "GNSS fault diagnostic threshold sensitivity",
@@ -167,7 +186,7 @@ def main():
         "limitations": [
             "Synthetic measurements with fixed satellite geometry.",
             "Leave-one-out fits four satellites to four unknowns.",
-            "Thresholds are evaluated on the same fixed geometry.",
+            "The same generated trials are reused across thresholds.",
             "This is not a complete RAIM implementation.",
             "Results do not establish real-world receiver performance.",
         ],
@@ -180,6 +199,7 @@ def main():
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(report, indent=2) + "\n")
+
     print(json.dumps(report, indent=2))
 
 
