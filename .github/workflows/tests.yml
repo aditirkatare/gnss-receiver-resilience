@@ -71,6 +71,11 @@ jobs:
         run: python scripts/analyze_residual_patterns.py
         env:
           PYTHONPATH: src
+          
+      - name: Analyze leave-one-out scores
+        run: python scripts/analyze_leave_one_out_scores.py
+        env:
+          PYTHONPATH: src
 
 
 
