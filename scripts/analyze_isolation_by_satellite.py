@@ -1,5 +1,5 @@
 
-"""Analyze GNSS fault isolation performance by satellite index."""
+"""Analyze GNSS fault isolation and build satellite confusion matrices."""
 
 import json
 from pathlib import Path
@@ -80,6 +80,17 @@ def add_rates(metrics):
     )
 
 
+def new_confusion_matrix(satellite_count):
+    """Rows are actual faulty satellites; columns are predicted outcomes."""
+    columns = [str(i) for i in range(satellite_count)]
+    columns += ["no_detection", "error"]
+
+    return {
+        str(actual): {predicted: 0 for predicted in columns}
+        for actual in range(satellite_count)
+    }
+
+
 def main():
     receiver = np.array([1_000_000.0, 2_000_000.0, 3_000_000.0])
 
@@ -99,8 +110,8 @@ def main():
     rng = np.random.default_rng(42)
 
     initial_position = receiver + np.array([100.0, -80.0, 50.0])
-
     method_names = ("baseline", "leave_one_out")
+    satellite_count = len(satellites)
 
     clean_metrics = {
         method: {
@@ -114,8 +125,13 @@ def main():
     fault_metrics = {
         method: {
             str(index): new_fault_metrics()
-            for index in range(len(satellites))
+            for index in range(satellite_count)
         }
+        for method in method_names
+    }
+
+    confusion_matrices = {
+        method: new_confusion_matrix(satellite_count)
         for method in method_names
     }
 
@@ -139,7 +155,7 @@ def main():
 
     for _ in range(trials_per_satellite):
         noise = rng.normal(
-            0.0, noise_std_m, size=len(satellites)
+            0.0, noise_std_m, size=satellite_count
         )
 
         clean_ranges = calculate_pseudoranges(
@@ -149,7 +165,7 @@ def main():
             noise_m=noise,
         )
 
-        # Evaluate clean measurements for the false-alarm baseline.
+        # Measure false alarms on clean data.
         for method in method_names:
             try:
                 result = evaluate(method, clean_ranges)
@@ -164,14 +180,16 @@ def main():
             ):
                 clean_metrics[method]["errors"] += 1
 
-        # Inject a fault into each satellite, using the same clean
-        # measurements so the methods can be compared fairly.
-        for faulty_index in range(len(satellites)):
+        # Inject a fault into each satellite using the same clean sample.
+        for faulty_index in range(satellite_count):
             faulty_ranges = clean_ranges.copy()
             faulty_ranges[faulty_index] += fault_size_m
 
+            actual_key = str(faulty_index)
+
             for method in method_names:
-                metrics = fault_metrics[method][str(faulty_index)]
+                metrics = fault_metrics[method][actual_key]
+                matrix_row = confusion_matrices[method][actual_key]
                 metrics["trials"] += 1
 
                 try:
@@ -182,15 +200,26 @@ def main():
                     np.linalg.LinAlgError,
                 ):
                     metrics["errors"] += 1
+                    matrix_row["error"] += 1
                     continue
 
                 if not result["detected"]:
                     metrics["missed_detections"] += 1
+                    matrix_row["no_detection"] += 1
                     continue
 
                 metrics["detections"] += 1
+                predicted_index = result["suspected_satellite_index"]
 
-                if result["suspected_satellite_index"] == faulty_index:
+                if predicted_index is None:
+                    metrics["missed_detections"] += 1
+                    matrix_row["no_detection"] += 1
+                    continue
+
+                predicted_key = str(predicted_index)
+                matrix_row[predicted_key] += 1
+
+                if predicted_index == faulty_index:
                     metrics["correct_isolations"] += 1
                 else:
                     metrics["wrong_isolations"] += 1
@@ -208,22 +237,28 @@ def main():
             add_rates(metrics)
 
     report = {
-        "experiment": "GNSS fault isolation by satellite index",
+        "experiment": "GNSS fault isolation confusion matrix analysis",
         "seed": 42,
         "trials_per_satellite": trials_per_satellite,
         "noise_std_m": noise_std_m,
         "injected_fault_m": fault_size_m,
         "threshold_m": threshold_m,
-        "satellite_count": len(satellites),
+        "satellite_count": satellite_count,
         "clean_scenario": clean_metrics,
         "fault_results_by_satellite": fault_metrics,
+        "confusion_matrices": {
+            "row_definition": "Actual faulty satellite index",
+            "column_definition": (
+                "Predicted faulty satellite index, no_detection, or error"
+            ),
+            "counts": confusion_matrices,
+        },
         "limitations": [
             "Synthetic measurements with fixed satellite geometry.",
             "Each satellite is tested with the same generated clean samples.",
             "One positive 1000 m pseudorange fault is injected per trial.",
             "Leave-one-out fits four satellites to four unknowns.",
-            "Residual and leave-one-out thresholds are not calibrated "
-            "for general operating conditions.",
+            "Thresholds are not calibrated for general operating conditions.",
             "This is not a complete RAIM implementation.",
             "Results do not establish real-world receiver performance.",
         ],
