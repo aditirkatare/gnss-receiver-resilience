@@ -61,6 +61,12 @@ jobs:
         run: python scripts/evaluate_threshold_sensitivity.py
         env:
           PYTHONPATH: src
+        
+      - name: Analyze fault isolation by satellite
+        run: python scripts/analyze_isolation_by_satellite.py
+        env:
+          PYTHONPATH: src
+
 
       
 
