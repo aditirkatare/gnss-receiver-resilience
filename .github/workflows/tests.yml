@@ -76,6 +76,14 @@ jobs:
         run: python scripts/analyze_leave_one_out_scores.py
         env:
           PYTHONPATH: src
+      
+      - name: Upload leave-one-out score report
+        uses: actions/upload-artifact@v4
+        with:
+          name: leave-one-out-score-report
+          path: results/leave_one_out_score_report.json
+          if-no-files-found: error
+
 
 
 
