@@ -88,6 +88,11 @@ jobs:
           name: geometry-conditioning-report
           path: results/geometry_conditioning_report.json
           if-no-files-found: error
+          
+      - name: Analyze leave-one-out subset position errors
+        run: python scripts/analyze_subset_position_errors.py
+        env:
+          PYTHONPATH: src
       
       - name: Upload leave-one-out score report
         uses: actions/upload-artifact@v4
