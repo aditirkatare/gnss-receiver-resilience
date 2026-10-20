@@ -136,6 +136,57 @@ The experiment records exception types and messages for failed trials. In this c
 - Multipath, atmospheric effects, satellite clock errors, and orbital errors are not modelled.
 - Results apply to the selected satellite subsets, estimator, noise assumptions, and trial configuration. They should not be generalized to all real-world GNSS conditions.
 
+
+## Fault Diagnostic Threshold Sensitivity
+
+### Experimental setup
+
+- Random seed: 42
+- Trials per scenario per threshold: 200
+- Measurement noise standard deviation: 1 m
+- Injected pseudorange fault: 1,000 m
+- Tested thresholds: 5, 10, 20, 50, and 100 m
+- Data: synthetic measurements with fixed satellite geometry
+
+### Results
+
+| Threshold (m) | Method | Clean false-alarm rate | Fault detection rate | Correct isolation rate |
+|---:|---|---:|---:|---:|
+| 5 | Baseline | 0% | 100% | 20% |
+| 5 | Leave-one-out | 40% | 100% | 20% |
+| 10 | Baseline | 0% | 100% | 20% |
+| 10 | Leave-one-out | 11% | 100% | 20% |
+| 20 | Baseline | 0% | 100% | 20% |
+| 20 | Leave-one-out | 0% | 100% | 20% |
+| 50 | Baseline | 0% | 100% | 20% |
+| 50 | Leave-one-out | 0% | 100% | 20% |
+| 100 | Baseline | 0% | 100% | 20% |
+| 100 | Leave-one-out | 0% | 100% | 20% |
+
+### Interpretation
+
+Under these experimental conditions, the baseline method recorded no
+false alarms at any tested threshold. Leave-one-out recorded false
+alarms at 5 m and 10 m, but none at 20 m, 50 m, or 100 m.
+
+Both methods detected all injected faults, but correctly isolated only
+40 of 200 faulty trials each. Increasing the threshold did not improve
+the observed isolation rate.
+
+The 20 m threshold was the lowest tested threshold with no observed
+leave-one-out false alarms. This result applies only to this experiment
+and does not establish a universally optimal threshold.
+
+### Limitations
+
+- Synthetic measurements and fixed satellite geometry.
+- The injected fault is large relative to the measurement noise.
+- The leave-one-out fit estimates four unknowns using four satellites.
+- Only a limited set of thresholds was evaluated.
+- This experiment is not a complete RAIM implementation.
+- These results do not establish real-world receiver performance.
+
+
 ## License
 
 MIT
