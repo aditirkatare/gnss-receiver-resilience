@@ -149,6 +149,19 @@ jobs:
           path: results/leave_one_out_score_report.json
           if-no-files-found: error
 
+      - name: Evaluate geometry robustness
+        run: python scripts/evaluate_geometry_robustness.py
+        env:
+          PYTHONPATH: src
+
+      - name: Upload geometry robustness report
+        uses: actions/upload-artifact@v4
+        with:
+          name: geometry-robustness-report
+          path: results/geometry_robustness_report.json
+          if-no-files-found: error
+
+
       
 
 
