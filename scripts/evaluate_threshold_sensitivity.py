@@ -88,8 +88,11 @@ def main():
                 noise = rng.normal(0.0, noise_std_m, len(satellites))
 
                 clean_ranges = calculate_pseudoranges(
-                    satellites, receiver, initial_clock_bias_m
+                    satellites,
+                    receiver,
+                    clock_bias_m=initial_clock_bias_m,
                 ) + noise
+
 
                 faulty_index = trial % len(satellites)
                 faulty_ranges = clean_ranges.copy()
