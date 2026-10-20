@@ -50,7 +50,9 @@ def build_geometries():
             [0.0, 0.0, 1.0],
         ]
     )
-    rotated = BASE_POSITIONS @ rotation.T
+    rotated = RECEIVER_POSITION_M + (
+        BASE_POSITIONS - RECEIVER_POSITION_M
+    ) @ rotation.T
 
     # Geometry C: move the satellite directions closer together.
     # This intentionally creates a more challenging geometry.
