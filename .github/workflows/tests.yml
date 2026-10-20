@@ -110,6 +110,19 @@ jobs:
           name: normalized-residual-report
           path: results/normalized_residual_report.json
           if-no-files-found: error
+      
+      - name: Evaluate satellite redundancy
+        run: python scripts/evaluate_satellite_redundancy.py
+        env:
+          PYTHONPATH: src
+
+      - name: Upload satellite redundancy report
+        uses: actions/upload-artifact@v4
+        with:
+          name: satellite-redundancy-report
+          path: results/satellite_redundancy_report.json
+          if-no-files-found: error
+
 
       - name: Upload geometry-aware isolation report
         uses: actions/upload-artifact@v4
