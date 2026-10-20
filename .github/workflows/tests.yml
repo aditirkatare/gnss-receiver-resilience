@@ -56,5 +56,15 @@ jobs:
         run: python scripts/evaluate_leave_one_out.py
         env:
           PYTHONPATH: src
+          
+      - name: Evaluate threshold sensitivity
+        run: python scripts/evaluate_threshold_sensitivity.py
+        env:
+          PYTHONPATH: src
 
+      
+
+        
+      
+      
 
