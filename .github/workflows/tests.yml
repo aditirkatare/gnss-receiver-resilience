@@ -77,6 +77,11 @@ jobs:
         env:
           PYTHONPATH: src
       
+      - name: Analyze leave-one-out geometry conditioning
+        run: python scripts/analyze_geometry_conditioning.py
+        env:
+          PYTHONPATH: src
+      
       - name: Upload geometry conditioning report
         uses: actions/upload-artifact@v4
         with:
